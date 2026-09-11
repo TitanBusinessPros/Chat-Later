@@ -1,6 +1,7 @@
 package com.titanbusinesspros.chatlater
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -115,9 +116,13 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
         heardText = ""
         translatedText = ""
 
-        val recognizer = SpeechRecognizer.createSpeechRecognizer(context)
-        val intent = RecognizerIntent.getVoiceDetailsIntent(context).apply {
-            action = RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+        val recognizer = try {
+            SpeechRecognizer.createSpeechRecognizer(context)
+        } catch (e: Exception) {
+            statusText = "Couldn't start speech recognition: ${e.message}"
+            return
+        }
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, speechLocaleTag)
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
@@ -166,7 +171,12 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
             override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
         })
 
-        recognizer.startListening(intent)
+        try {
+            recognizer.startListening(intent)
+        } catch (e: Exception) {
+            statusText = "Couldn't start listening: ${e.message}"
+            recognizer.destroy()
+        }
     }
 
     Column(

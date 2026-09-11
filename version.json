@@ -1,6 +1,6 @@
 {
-  "versionCode": 5,
-  "versionName": "1.4",
+  "versionCode": 6,
+  "versionName": "1.5",
   "apkUrl": "https://github.com/TitanBusinessPros/Chat-Later/releases/latest/download/Chat-Later.apk",
-  "notes": "Added a 'Check for updates' button and update banner on the sign-in screen too, not just after logging in."
+  "notes": "Fixed a crash when pressing the microphone button to talk."
 }
