@@ -4,7 +4,9 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,8 +35,15 @@ private data class TrialStatus(val trialStartMillis: Long, val isPaid: Boolean)
 
 @Composable
 fun HomeScreen(user: FirebaseUser, firestore: FirebaseFirestore) {
+    val context = LocalContext.current
     var status by remember { mutableStateOf<TrialStatus?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+
+    // Checks once per screen visit whether a newer APK is posted on the download site.
+    LaunchedEffect(Unit) {
+        checkForUpdate(context) { updateInfo = it }
+    }
 
     // Reads (or creates, for older accounts) this user's trial/payment record in Firestore.
     LaunchedEffect(user.uid) {
@@ -54,20 +63,44 @@ fun HomeScreen(user: FirebaseUser, firestore: FirebaseFirestore) {
             .addOnFailureListener { e -> errorMessage = e.message }
     }
 
-    when {
-        errorMessage != null -> Text("Error loading account: $errorMessage")
-        status == null -> CircularProgressIndicator()
-        else -> {
-            val daysUsed = (System.currentTimeMillis() - status!!.trialStartMillis) / (1000L * 60 * 60 * 24)
-            val trialActive = status!!.isPaid || daysUsed < TRIAL_DAYS
-            if (trialActive) {
-                ConversationTranslatorScreen(
-                    daysLeft = (TRIAL_DAYS - daysUsed).coerceAtLeast(0),
-                    isPaid = status!!.isPaid
-                )
-            } else {
-                TrialExpiredScreen()
+    Column(modifier = Modifier.fillMaxSize()) {
+        updateInfo?.let { UpdateBanner(it) }
+
+        when {
+            errorMessage != null -> Text("Error loading account: $errorMessage")
+            status == null -> CircularProgressIndicator()
+            else -> {
+                val daysUsed = (System.currentTimeMillis() - status!!.trialStartMillis) / (1000L * 60 * 60 * 24)
+                val trialActive = status!!.isPaid || daysUsed < TRIAL_DAYS
+                if (trialActive) {
+                    ConversationTranslatorScreen(
+                        daysLeft = (TRIAL_DAYS - daysUsed).coerceAtLeast(0),
+                        isPaid = status!!.isPaid
+                    )
+                } else {
+                    TrialExpiredScreen()
+                }
             }
+        }
+    }
+}
+
+// Shown at the top of the app when version.json on the download site reports a newer build.
+@Composable
+private fun UpdateBanner(update: UpdateInfo) {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("Update available" + if (update.versionName.isNotBlank()) " (v${update.versionName})" else "")
+        Button(onClick = {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.apkUrl)))
+        }) {
+            Text("Download")
         }
     }
 }
