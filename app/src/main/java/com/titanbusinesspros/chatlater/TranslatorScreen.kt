@@ -125,7 +125,10 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, speechLocaleTag)
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            // Not forcing offline-only recognition: that requires the phone to already have
+            // that language's offline pack downloaded, or it fails with
+            // ERROR_LANGUAGE_UNAVAILABLE (code 13). Letting it use the network when needed
+            // works out of the box on every device.
         }
 
         recognizer.setRecognitionListener(object : RecognitionListener {

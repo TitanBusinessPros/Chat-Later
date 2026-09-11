@@ -1,6 +1,6 @@
 {
-  "versionCode": 8,
-  "versionName": "1.7",
+  "versionCode": 9,
+  "versionName": "1.8",
   "apkUrl": "https://github.com/TitanBusinessPros/Chat-Later/releases/latest/download/Chat-Later.apk",
-  "notes": "If the app crashes, it now shows the exact error on screen the next time you open it, so it can be reported and fixed precisely."
+  "notes": "Fixed mic error 13 (language pack not downloaded) by no longer forcing offline-only speech recognition."
 }
