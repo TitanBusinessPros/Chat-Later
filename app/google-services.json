@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "193355563840",
+    "project_id": "chat-later-7f73a",
+    "storage_bucket": "chat-later-7f73a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:193355563840:android:1cfa2926abb1fff887b0a5",
+        "android_client_info": {
+          "package_name": "com.titanbusinesspros.chatlater"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "193355563840-du0d9il7qufd4cd6reaklt1pqiokcmn1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQRsBK4X1pvSGjx7h4vMY6ALRT8qhNqXc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "193355563840-du0d9il7qufd4cd6reaklt1pqiokcmn1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
