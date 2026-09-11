@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat-Later — Download</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #171a23;
+    --text: #eef0f4;
+    --muted: #9aa1b2;
+    --accent: #4f8cff;
+    --accent-dark: #3a6fd6;
+    --warn-bg: #2a2210;
+    --warn-border: #6b5a1c;
+    --warn-text: #e8c766;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding-block: 48px;
+    padding-inline: 16px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+  .wrap { width: 100%; max-width: 560px; }
+  .logo-badge {
+    width: 64px; height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    margin: 0 auto 20px;
+  }
+  h1 { text-align: center; font-size: 1.8rem; margin: 0 0 8px; }
+  .subtitle { text-align: center; color: var(--muted); margin: 0 0 32px; font-size: 1rem; line-height: 1.5; }
+  .card {
+    background: var(--card);
+    border: 1px solid #262a38;
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+  .features { list-style: none; padding: 0; margin: 0 0 28px; display: grid; gap: 12px; }
+  .features li { display: flex; gap: 10px; align-items: flex-start; color: var(--muted); font-size: 0.95rem; line-height: 1.4; }
+  .features li span.icon { flex-shrink: 0; }
+  .download-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.05rem;
+    padding: 16px 20px;
+    border-radius: 12px;
+    transition: background 0.15s ease;
+  }
+  .download-btn:hover { background: var(--accent-dark); }
+  .version-note { text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: 10px; }
+  .warn {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    color: var(--warn-text);
+    border-radius: 12px;
+    padding: 16px 18px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+  .warn strong { color: #fff; }
+  h2 { font-size: 1.1rem; margin: 0 0 14px; }
+  ol { margin: 0; padding-left: 20px; color: var(--muted); font-size: 0.95rem; line-height: 1.7; }
+  ol li strong { color: var(--text); }
+  footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 32px; }
+  footer a { color: var(--accent); }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f6f8;
+      --card: #ffffff;
+      --text: #14161c;
+      --muted: #5a6072;
+      --warn-bg: #fff8e6;
+      --warn-border: #f0d98a;
+      --warn-text: #7a5c00;
+    }
+    .card { border-color: #e4e6ec; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo-badge">🗣️</div>
+    <h1>Chat-Later</h1>
+    <p class="subtitle">A two-way English ↔ Spanish voice translator for Android. Speak in one language, hear it spoken back in the other — instantly, on your device.</p>
+
+    <div class="card">
+      <ul class="features">
+        <li><span class="icon">🎙️</span> Speak naturally — no typing required</li>
+        <li><span class="icon">🔊</span> Hear the translation spoken out loud</li>
+        <li><span class="icon">📴</span> Translation runs on your phone, not the cloud</li>
+        <li><span class="icon">🆓</span> Free 7-day trial, no card required to start</li>
+      </ul>
+
+      <a class="download-btn" href="https://github.com/TitanBusinessPros/Chat-Later/releases/download/v0.1.0-debug/app-debug.apk" download>
+        ⬇ Download for Android
+      </a>
+      <p class="version-note">v0.1.0 · Test build · Android 8.0+</p>
+    </div>
+
+    <div class="warn">
+      <strong>Heads up:</strong> this is an early test build. It's not on the Google Play Store, so Android will warn you about installing an app from outside the Store — that's expected. It's still being tested, so expect rough edges.
+    </div>
+
+    <div class="card">
+      <h2>How to install it</h2>
+      <ol>
+        <li>Tap <strong>Download for Android</strong> above using your phone's browser.</li>
+        <li>When the download finishes, tap the file (usually shown in a notification, or in your <strong>Downloads</strong> app).</li>
+        <li>Android will say <strong>"Install blocked"</strong> or ask to allow this source — tap <strong>Settings</strong>, turn on <strong>"Allow from this source"</strong>, then go back and tap Install.</li>
+        <li>Once installed, open <strong>Chat-Later</strong> from your app drawer and create an account to start your free trial.</li>
+      </ol>
+    </div>
+
+    <footer>
+      Chat-Later by Titan Business Pros · <a href="https://github.com/TitanBusinessPros/Chat-Later">View source on GitHub</a>
+    </footer>
+  </div>
+</body>
+</html>
