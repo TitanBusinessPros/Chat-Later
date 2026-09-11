@@ -1,6 +1,6 @@
 {
-  "versionCode": 2,
-  "versionName": "1.1",
-  "apkUrl": "https://github.com/TitanBusinessPros/Chat-Later/releases/latest/download/app-debug.apk",
-  "notes": "Language selector, custom app icon, and in-app update checker."
+  "versionCode": 3,
+  "versionName": "1.2",
+  "apkUrl": "https://github.com/TitanBusinessPros/Chat-Later/releases/latest/download/Chat-Later.apk",
+  "notes": "Properly signed release build (was a debug test build before), and fixed the app's display name."
 }

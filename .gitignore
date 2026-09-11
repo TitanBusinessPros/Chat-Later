@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Release signing key - never commit this. Losing it means you can
+# never publish an "update" under the same app identity again.
+/keystore/
