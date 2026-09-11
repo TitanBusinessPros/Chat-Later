@@ -1,6 +1,6 @@
 {
-  "versionCode": 7,
-  "versionName": "1.6",
+  "versionCode": 8,
+  "versionName": "1.7",
   "apkUrl": "https://github.com/TitanBusinessPros/Chat-Later/releases/latest/download/Chat-Later.apk",
-  "notes": "Fixed a missing Android permission declaration that could stop speech recognition from starting on some devices."
+  "notes": "If the app crashes, it now shows the exact error on screen the next time you open it, so it can be reported and fixed precisely."
 }
