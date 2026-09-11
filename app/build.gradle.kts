@@ -7,7 +7,7 @@ plugins {
 }
 
 // Release signing info lives in keystore/keystore.properties, which is gitignored -
-// it's never committed. See keystore/README.md for how to recreate/back it up.
+// it's never committed. See SIGNING.md for why it must be backed up separately.
 val keystoreProperties = Properties().apply {
     val propsFile = rootProject.file("keystore/keystore.properties")
     if (propsFile.exists()) {
@@ -25,8 +25,8 @@ android {
         applicationId = "com.titanbusinesspros.chatlater"
         minSdk = 26
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -70,6 +70,11 @@ dependencies {
 
     // On-device translation (free, no third-party API cost)
     implementation("com.google.mlkit:translate:17.0.3")
+
+    // "Sign in with Google" via Credential Manager
+    implementation("androidx.credentials:credentials:1.2.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
