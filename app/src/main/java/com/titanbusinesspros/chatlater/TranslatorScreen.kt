@@ -16,6 +16,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -28,17 +34,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
 import java.util.Locale
 
-// Two-way conversation translator: English <-> Spanish.
+// Two-way conversation translator between any two of SUPPORTED_LANGUAGES (picked below).
 // Pipeline for each button: mic (SpeechRecognizer) -> translate (ML Kit, on-device) -> speak (TextToSpeech).
 // All three steps run on the phone - no paid third-party API calls.
 @Composable
 fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
     val context = LocalContext.current
+
+    var langA by remember { mutableStateOf(SUPPORTED_LANGUAGES[0]) } // English
+    var langB by remember { mutableStateOf(SUPPORTED_LANGUAGES[1]) } // Spanish
 
     var heardText by remember { mutableStateOf("") }
     var translatedText by remember { mutableStateOf("") }
@@ -54,33 +62,33 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
         ActivityResultContracts.RequestPermission()
     ) { granted -> hasMicPermission = granted }
 
-    // English -> Spanish and Spanish -> English translators (each downloads its small model once, then works offline).
-    val enToEs = remember {
+    // A -> B and B -> A translators for whichever pair is picked above.
+    // Rebuilt whenever langA/langB changes; each downloads its small model once, then works offline.
+    val aToB = remember(langA, langB) {
         Translation.getClient(
             TranslatorOptions.Builder()
-                .setSourceLanguage(TranslateLanguage.ENGLISH)
-                .setTargetLanguage(TranslateLanguage.SPANISH)
+                .setSourceLanguage(langA.mlKitCode)
+                .setTargetLanguage(langB.mlKitCode)
                 .build()
         )
     }
-    val esToEn = remember {
+    DisposableEffect(aToB) { onDispose { aToB.close() } }
+
+    val bToA = remember(langA, langB) {
         Translation.getClient(
             TranslatorOptions.Builder()
-                .setSourceLanguage(TranslateLanguage.SPANISH)
-                .setTargetLanguage(TranslateLanguage.ENGLISH)
+                .setSourceLanguage(langB.mlKitCode)
+                .setTargetLanguage(langA.mlKitCode)
                 .build()
         )
     }
+    DisposableEffect(bToA) { onDispose { bToA.close() } }
 
     val textToSpeech = remember { arrayOfNulls<TextToSpeech>(1) }
     DisposableEffect(Unit) {
         val tts = TextToSpeech(context) { }
         textToSpeech[0] = tts
-        onDispose {
-            tts.shutdown()
-            enToEs.close()
-            esToEn.close()
-        }
+        onDispose { tts.shutdown() }
     }
 
     fun speak(text: String, locale: Locale) {
@@ -173,6 +181,32 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
             Text("Free trial: $daysLeft day(s) left")
         }
 
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            LanguageDropdown(
+                label = "Language A",
+                selected = langA,
+                onSelected = { langA = it },
+                modifier = Modifier.weight(1f)
+            )
+            LanguageDropdown(
+                label = "Language B",
+                selected = langB,
+                onSelected = { langB = it },
+                modifier = Modifier.weight(1f)
+            )
+        }
+        if (langA == langB) {
+            Text(
+                text = "Pick two different languages",
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+
         Text(text = statusText, modifier = Modifier.padding(top = 16.dp))
 
         if (heardText.isNotBlank()) {
@@ -189,25 +223,66 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Button(
+                enabled = langA != langB,
                 onClick = {
-                    listenAndTranslate("en-US", enToEs, Locale("es", "ES"))
+                    listenAndTranslate(langA.speechTag, aToB, langB.ttsLocale)
                 },
                 modifier = Modifier
                     .weight(1f)
                     .height(80.dp)
             ) {
-                Text("🎤 Speak English")
+                Text("🎤 Speak ${langA.label}")
             }
 
             Button(
+                enabled = langA != langB,
                 onClick = {
-                    listenAndTranslate("es-ES", esToEn, Locale.US)
+                    listenAndTranslate(langB.speechTag, bToA, langA.ttsLocale)
                 },
                 modifier = Modifier
                     .weight(1f)
                     .height(80.dp)
             ) {
-                Text("🎤 Hablar Español")
+                Text("🎤 Speak ${langB.label}")
+            }
+        }
+    }
+}
+
+// A dropdown for picking one of SUPPORTED_LANGUAGES.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LanguageDropdown(
+    label: String,
+    selected: AppLanguage,
+    onSelected: (AppLanguage) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = selected.label,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            SUPPORTED_LANGUAGES.forEach { lang ->
+                DropdownMenuItem(
+                    text = { Text(lang.label) },
+                    onClick = {
+                        onSelected(lang)
+                        expanded = false
+                    }
+                )
             }
         }
     }
