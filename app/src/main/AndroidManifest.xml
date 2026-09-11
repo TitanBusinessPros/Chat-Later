@@ -5,6 +5,19 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- Required on Android 11+ (package visibility) so this app is allowed to see
+         and bind to the device's speech recognition service. Without this,
+         SpeechRecognizer can fail to start even though isRecognitionAvailable()
+         reports true, crashing on real devices when a mic button is pressed. -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
