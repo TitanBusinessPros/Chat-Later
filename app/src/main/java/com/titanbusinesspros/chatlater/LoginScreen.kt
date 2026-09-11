@@ -2,6 +2,7 @@ package com.titanbusinesspros.chatlater
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -11,6 +12,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +54,23 @@ fun LoginScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+    var checkingUpdate by remember { mutableStateOf(false) }
+    var justConfirmedUpToDate by remember { mutableStateOf(false) }
+
+    fun checkUpdateNow() {
+        checkingUpdate = true
+        justConfirmedUpToDate = false
+        checkForUpdate(context) { result ->
+            checkingUpdate = false
+            updateInfo = result
+            if (result == null) justConfirmedUpToDate = true
+        }
+    }
+
+    // Checks once when this screen appears, so you see it even before logging in.
+    LaunchedEffect(Unit) { checkUpdateNow() }
+
     // Opens the system "choose a Google account" sheet, then signs in to Firebase with it.
     fun signInWithGoogle() {
         errorMessage = null
@@ -86,14 +105,27 @@ fun LoginScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("Chat Later - Sign In")
+    Column(modifier = Modifier.fillMaxSize()) {
+        updateInfo?.let { UpdateBanner(it) }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("Chat Later - Sign In")
+
+            TextButton(onClick = { checkUpdateNow() }, enabled = !checkingUpdate) {
+                Text(
+                    when {
+                        checkingUpdate -> "Checking for updates..."
+                        justConfirmedUpToDate -> "You're on the latest version"
+                        else -> "Check for updates"
+                    }
+                )
+            }
 
         OutlinedTextField(
             value = email,
@@ -184,6 +216,7 @@ fun LoginScreen(
             ) {
                 Text("Sign in with Google")
             }
+        }
         }
     }
 }

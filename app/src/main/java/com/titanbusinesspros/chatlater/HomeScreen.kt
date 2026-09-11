@@ -4,9 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -81,26 +79,6 @@ fun HomeScreen(user: FirebaseUser, firestore: FirebaseFirestore) {
                     TrialExpiredScreen()
                 }
             }
-        }
-    }
-}
-
-// Shown at the top of the app when version.json on the download site reports a newer build.
-@Composable
-private fun UpdateBanner(update: UpdateInfo) {
-    val context = LocalContext.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text("Update available" + if (update.versionName.isNotBlank()) " (v${update.versionName})" else "")
-        Button(onClick = {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.apkUrl)))
-        }) {
-            Text("Download")
         }
     }
 }
