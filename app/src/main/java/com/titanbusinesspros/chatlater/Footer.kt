@@ -87,7 +87,7 @@ private fun AppLogo() {
 @Composable
 fun AppIcon() {
     androidx.compose.foundation.Image(
-        painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher),
+        painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher_foreground),
         contentDescription = "Chat-Later app icon",
         contentScale = androidx.compose.ui.layout.ContentScale.Fit,
         modifier = Modifier

@@ -1,6 +1,6 @@
 {
-  "versionCode": 12,
-  "versionName": "1.11",
+  "versionCode": 13,
+  "versionName": "1.12",
   "apkUrl": "https://github.com/TitanBusinessPros/Chat-Later/releases/latest/download/Chat-Later.apk",
-  "notes": "Fixed a crash (\"Translator has been closed\") that could occur if the screen changed mid-translation. Redesigned the top of the screen: the app icon now leads, and the Titan Business Pros logo moved into the footer."
+  "notes": "Fixed a crash on launch on real devices (IllegalArgumentException: Only VectorDrawables and rasterized asset types are supported). The app icon at the top of each screen was loading an adaptive-icon XML resource that Compose cannot render; it now loads a plain PNG instead."
 }
