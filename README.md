@@ -19,7 +19,7 @@ Firebase (Auth + Firestore) tracks logins and trial/subscription status — free
 - ML Kit Translate — all 59 on-device supported languages, picked via a searchable dialog
 - Stripe Payment Link for subscription payment (manual link for now, no in-app billing SDK)
 
-## Current status — v1.12 (versionCode 13)
+## Current status — v1.13 (versionCode 14)
 
 Published and live at https://github.com/TitanBusinessPros/Chat-Later/releases/latest
 
@@ -35,6 +35,7 @@ Built so far:
 - [x] On-device crash reporter — shows the last crash's details on next launch if one occurred
 - [x] Fixed a real crash (`IllegalStateException: Translator has been closed`) that could occur if the screen changed mid-translation — each request now owns its own Translator, closed exactly once
 - [x] Fixed a crash on launch on real devices (`IllegalArgumentException: Only VectorDrawables and rasterized asset types are supported`) — the header app icon was loading `R.mipmap.ic_launcher`, which resolves to an `<adaptive-icon>` XML that Compose's `painterResource()` cannot render; it now loads the plain PNG `R.mipmap.ic_launcher_foreground` instead
+- [x] Fixed the translator not speaking the translation out loud — `speak()` ignored whether the TTS engine had finished initializing and never checked whether the target language's voice was installed, so it failed silently; it now checks both and shows an on-screen message if no voice is available for that language on the device
 
 Still to do:
 - [ ] Swap the placeholder Stripe Payment Link (`STRIPE_PAYMENT_LINK` in `HomeScreen.kt`) for the real one

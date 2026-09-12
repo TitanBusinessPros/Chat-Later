@@ -1,6 +1,6 @@
 {
-  "versionCode": 13,
-  "versionName": "1.12",
+  "versionCode": 14,
+  "versionName": "1.13",
   "apkUrl": "https://github.com/TitanBusinessPros/Chat-Later/releases/latest/download/Chat-Later.apk",
-  "notes": "Fixed a crash on launch on real devices (IllegalArgumentException: Only VectorDrawables and rasterized asset types are supported). The app icon at the top of each screen was loading an adaptive-icon XML resource that Compose cannot render; it now loads a plain PNG instead."
+  "notes": "Fixed the translator not speaking the translation out loud. speak() never checked whether the text-to-speech engine had finished initializing or whether the target language's voice was installed on the device, so it failed silently. It now checks both and tells you on screen if no voice is available for that language on your device."
 }

@@ -103,15 +103,28 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
     DisposableEffect(Unit) { onDispose { screenLifetime.isActive = false } }
 
     val textToSpeech = remember { arrayOfNulls<TextToSpeech>(1) }
+    var ttsReady by remember { mutableStateOf(false) }
     DisposableEffect(Unit) {
-        val tts = TextToSpeech(context) { }
+        val tts = TextToSpeech(context) { status -> ttsReady = status == TextToSpeech.SUCCESS }
         textToSpeech[0] = tts
         onDispose { tts.shutdown() }
     }
 
-    fun speak(text: String, locale: Locale) {
-        textToSpeech[0]?.language = locale
-        textToSpeech[0]?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+    // Returns false (speaking nothing) if the TTS engine never finished initializing, or
+    // if this device has no installed voice for `locale` - both fail silently inside the
+    // platform API otherwise, so the caller uses the return value to tell the user instead
+    // of leaving them looking at translated text with no idea why it's not being read aloud.
+    fun speak(text: String, locale: Locale): Boolean {
+        val tts = textToSpeech[0] ?: return false
+        if (!ttsReady) return false
+        val languageResult = tts.setLanguage(locale)
+        if (languageResult == TextToSpeech.LANG_MISSING_DATA ||
+            languageResult == TextToSpeech.LANG_NOT_SUPPORTED
+        ) {
+            return false
+        }
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+        return true
     }
 
     // Listens in `speechLocaleTag`, translates sourceCode->targetCode, then speaks the
@@ -214,8 +227,11 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
                                     .addOnSuccessListener { translated ->
                                         if (screenLifetime.isActive) {
                                             translatedText = translated
-                                            statusText = "Speaking..."
-                                            speak(translated, outputLocale)
+                                            statusText = if (speak(translated, outputLocale)) {
+                                                "Speaking..."
+                                            } else {
+                                                "Translated. No voice available to speak it on this device."
+                                            }
                                             isBusy = false
                                         }
                                         closeTranslatorOnce()
