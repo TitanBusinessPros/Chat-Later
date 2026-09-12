@@ -144,12 +144,11 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
             // ERROR_LANGUAGE_UNAVAILABLE (code 13). Letting it use the network when needed
             // works out of the box on every device.
 
-            // Ask for up to 4 seconds of silence before the recognizer finalizes what was
-            // said, so a brief pause mid-sentence doesn't cut speech off early. This is a
-            // request, not a guarantee - the phone's speech service decides the actual
-            // cutoff behavior, and some devices/services may not honor it.
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 4000)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 4000)
+            // NOTE: previously also set EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS and
+            // EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS to 4000 to allow a
+            // longer pause before cutoff. Removed: it caused the recognizer to finalize with
+            // an empty transcript after ~4s instead of capturing speech. Restored to the
+            // last confirmed-working intent (no silence-length extras).
         }
 
         recognizer.setRecognitionListener(object : RecognitionListener {
@@ -158,7 +157,9 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
                 val said = matches?.firstOrNull().orEmpty()
                 heardText = said
                 if (said.isBlank()) {
-                    statusText = "Didn't catch that - try again"
+                    // The recognizer finished normally (no error code) but returned zero
+                    // transcribed words - distinct from onError below.
+                    statusText = "Didn't catch that — please try again."
                     recognizer.destroy()
                     return
                 }
@@ -176,21 +177,26 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
                             }
                     }
                     .addOnFailureListener { e ->
-                        statusText = "Couldn't download translation model: ${e.message}"
+                        // Translation-model download/prep failure, distinct from a mic error.
+                        statusText = "Couldn't prepare the translation language. Check your connection and try again."
                     }
                 recognizer.destroy()
             }
 
             override fun onError(error: Int) {
-                statusText = "Mic error (code $error) - try again"
+                // `error` is a SpeechRecognizer.ERROR_* code (see android docs) - kept out of
+                // the user-facing message but useful when reported back for debugging.
+                statusText = "Microphone/speech recognition error (code $error). Please try again."
                 recognizer.destroy()
             }
 
-            override fun onReadyForSpeech(params: android.os.Bundle?) {}
+            override fun onReadyForSpeech(params: android.os.Bundle?) {
+                statusText = "Listening…"
+            }
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { statusText = "Processing..." }
+            override fun onEndOfSpeech() { statusText = "Processing…" }
             override fun onPartialResults(partialResults: android.os.Bundle?) {}
             override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
         })
@@ -245,11 +251,6 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
         }
 
         Text(text = statusText, modifier = Modifier.padding(top = 16.dp))
-        Text(
-            text = "The app requests up to four seconds of pause time before it stops " +
-                "listening; the phone's speech service controls the final behavior.",
-            modifier = Modifier.padding(top = 4.dp)
-        )
 
         if (heardText.isNotBlank()) {
             Text(text = "Heard: $heardText", modifier = Modifier.padding(top = 12.dp))

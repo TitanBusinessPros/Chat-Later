@@ -49,12 +49,12 @@ fun AppFooter() {
         Row {
             Text(
                 "Terms of Service",
-                modifier = Modifier.clickable { open("https://survival-day-app.web.app/terms") }
+                modifier = Modifier.clickable { open("https://titanbusinesspros.github.io/Chat-Later/terms.html") }
             )
             Text(" · ")
             Text(
                 "Privacy Policy",
-                modifier = Modifier.clickable { open("https://survival-day-app.web.app/privacy") }
+                modifier = Modifier.clickable { open("https://titanbusinesspros.github.io/Chat-Later/privacy.html") }
             )
         }
 
