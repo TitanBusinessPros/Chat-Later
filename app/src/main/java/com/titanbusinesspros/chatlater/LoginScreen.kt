@@ -36,6 +36,12 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
+// Some Firebase/Credential Manager exceptions carry a non-null but empty message
+// (observed with certain Google Play services error paths), which `?: fallback` alone
+// does not catch since that only substitutes on null - so every place below that shows
+// an exception's message to the user falls back through this instead of bare `?:`.
+private fun String?.ifBlankUse(fallback: String): String = if (isNullOrBlank()) fallback else this
+
 // This is the "Web client (auto created by Google Service)" OAuth client ID that
 // Firebase generates automatically for this project - not a secret, safe to embed.
 // (Firebase console: Authentication -> Sign-in method -> Google, already enabled.)
@@ -102,7 +108,7 @@ fun LoginScreen(
                 isLoading = false // user backed out of the account picker - not an error
             } catch (e: GetCredentialException) {
                 isLoading = false
-                errorMessage = e.message ?: "Google sign-in failed"
+                errorMessage = e.message.ifBlankUse("Google sign-in failed")
             }
         }
     }
@@ -179,7 +185,7 @@ fun LoginScreen(
                             if (task.isSuccessful) {
                                 onLoggedIn()
                             } else {
-                                errorMessage = task.exception?.message ?: "Sign in failed"
+                                errorMessage = task.exception?.message.ifBlankUse("Sign in failed")
                             }
                         }
                 },
@@ -217,7 +223,7 @@ fun LoginScreen(
                                 }
                                 onLoggedIn()
                             } else {
-                                errorMessage = task.exception?.message ?: "Sign up failed"
+                                errorMessage = task.exception?.message.ifBlankUse("Sign up failed")
                             }
                         }
                 },
