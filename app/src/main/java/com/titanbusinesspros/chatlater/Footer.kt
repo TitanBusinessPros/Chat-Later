@@ -27,9 +27,11 @@ fun AppFooter() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 24.dp, bottom = 8.dp),
+            .padding(top = 12.dp, bottom = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        AppLogo()
+
         Text("Created by Titan Business Pros LLC", textAlign = TextAlign.Center)
 
         Row {
@@ -65,14 +67,28 @@ fun AppFooter() {
     }
 }
 
-// The Titan logo, shown floating/centered above the content on every primary screen.
-// Bundled as a local drawable resource (res/drawable-nodpi/titan_logo.png) - never
-// downloaded at runtime.
+// The Titan Business Pros logo, shown above the footer text. Bundled as a local drawable
+// resource (res/drawable-nodpi/titan_logo.png) - never downloaded at runtime.
 @Composable
-fun AppLogo() {
+private fun AppLogo() {
     androidx.compose.foundation.Image(
         painter = androidx.compose.ui.res.painterResource(id = R.drawable.titan_logo),
         contentDescription = "Titan Business Pros logo",
+        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+        modifier = Modifier
+            .padding(bottom = 4.dp)
+            .height(16.dp)
+    )
+}
+
+// The app's own launcher icon, shown at the top of each primary screen (sign-in, the
+// translator, and trial-expired) in place of the Titan logo, which now lives in the
+// footer instead. Uses the existing launcher resource - not a network image.
+@Composable
+fun AppIcon() {
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher),
+        contentDescription = "Chat-Later app icon",
         contentScale = androidx.compose.ui.layout.ContentScale.Fit,
         modifier = Modifier
             .padding(bottom = 8.dp)

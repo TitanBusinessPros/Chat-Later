@@ -53,6 +53,16 @@ import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
 import java.util.Locale
 
+// Plain (non-Compose-State) holder for whether a screen instance is still current. Not
+// tracked by the snapshot/recomposition system and never rendered itself - it exists
+// only so an async callback can check, before writing any UI state, whether the screen
+// that started its request is still around. `remember { ScreenLifetime() }` gives every
+// fresh composition of ConversationTranslatorScreen its own instance starting `true`;
+// nothing but disposal ever sets it `false`, and it never closes any resource itself.
+private class ScreenLifetime {
+    var isActive = true
+}
+
 // Two-way conversation translator between any two of SUPPORTED_LANGUAGES (picked below).
 // Pipeline for each button: mic (SpeechRecognizer) -> translate (ML Kit, on-device) -> speak (TextToSpeech).
 // All three steps run on the phone - no paid third-party API calls.
@@ -66,6 +76,11 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
     var heardText by remember { mutableStateOf("") }
     var translatedText by remember { mutableStateOf("") }
     var statusText by remember { mutableStateOf("Press a button and speak") }
+    // True from the moment a mic button starts a request until that request's full
+    // success/failure chain finishes. While true, both Speak buttons and both language
+    // pickers are disabled - this is the single guard against a second concurrent
+    // request and against langA/langB changing mid-request.
+    var isBusy by remember { mutableStateOf(false) }
     var hasMicPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
@@ -77,27 +92,15 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
         ActivityResultContracts.RequestPermission()
     ) { granted -> hasMicPermission = granted }
 
-    // A -> B and B -> A translators for whichever pair is picked above.
-    // Rebuilt whenever langA/langB changes; each downloads its small model once, then works offline.
-    val aToB = remember(langA, langB) {
-        Translation.getClient(
-            TranslatorOptions.Builder()
-                .setSourceLanguage(langA.mlKitCode)
-                .setTargetLanguage(langB.mlKitCode)
-                .build()
-        )
-    }
-    DisposableEffect(aToB) { onDispose { aToB.close() } }
-
-    val bToA = remember(langA, langB) {
-        Translation.getClient(
-            TranslatorOptions.Builder()
-                .setSourceLanguage(langB.mlKitCode)
-                .setTargetLanguage(langA.mlKitCode)
-                .build()
-        )
-    }
-    DisposableEffect(bToA) { onDispose { bToA.close() } }
+    // See ScreenLifetime above. An async callback checks screenLifetime.isActive before
+    // writing any UI state, so a callback that fires after the screen has been disposed
+    // (trial expiring, sign-out, a configuration change) doesn't act on a screen that's
+    // already gone. This never closes anything - each request creates its own Translator
+    // (see listenAndTranslate below) and that same request's own terminal callback is
+    // solely responsible for closing it, exactly once, whether or not the screen is
+    // still around to see the result.
+    val screenLifetime = remember { ScreenLifetime() }
+    DisposableEffect(Unit) { onDispose { screenLifetime.isActive = false } }
 
     val textToSpeech = remember { arrayOfNulls<TextToSpeech>(1) }
     DisposableEffect(Unit) {
@@ -111,10 +114,13 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
         textToSpeech[0]?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
 
-    // Listens in `speechLocaleTag`, translates with `translator`, then speaks the result in `outputLocale`.
+    // Listens in `speechLocaleTag`, translates sourceCode->targetCode, then speaks the
+    // result in `outputLocale`. sourceCode/targetCode are ML Kit language codes for
+    // whichever direction this button speaks.
     fun listenAndTranslate(
         speechLocaleTag: String,
-        translator: com.google.mlkit.nl.translate.Translator,
+        sourceCode: String,
+        targetCode: String,
         outputLocale: Locale
     ) {
         if (!hasMicPermission) {
@@ -126,23 +132,31 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
             return
         }
 
-        statusText = "Listening..."
-        heardText = ""
-        translatedText = ""
+        if (screenLifetime.isActive) {
+            isBusy = true
+            statusText = "Listening..."
+            heardText = ""
+            translatedText = ""
+        }
 
         val recognizer = try {
             SpeechRecognizer.createSpeechRecognizer(context)
         } catch (e: Exception) {
-            statusText = "Couldn't start speech recognition: ${e.message}"
+            if (screenLifetime.isActive) {
+                statusText = "Couldn't start speech recognition: ${e.message}"
+                isBusy = false
+            }
             return
         }
+
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, speechLocaleTag)
             // Not forcing offline-only recognition: that requires the phone to already have
             // that language's offline pack downloaded, or it fails with
-            // ERROR_LANGUAGE_UNAVAILABLE (code 13). Letting it use the network when needed
-            // works out of the box on every device.
+            // ERROR_LANGUAGE_UNAVAILABLE (code 13). The recognizer may use whichever
+            // recognition service is available on this device, and the network where
+            // needed for that service - actual availability still depends on the device.
 
             // NOTE: previously also set EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS and
             // EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS to 4000 to allow a
@@ -155,48 +169,111 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
             override fun onResults(results: android.os.Bundle) {
                 val matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 val said = matches?.firstOrNull().orEmpty()
-                heardText = said
+                if (screenLifetime.isActive) heardText = said
+
+                // The recognizer's job ends here either way - destroy it now, separately
+                // from the translator below, which doesn't exist yet at this point.
+                recognizer.destroy()
+
                 if (said.isBlank()) {
                     // The recognizer finished normally (no error code) but returned zero
                     // transcribed words - distinct from onError below.
-                    statusText = "Didn't catch that — please try again."
-                    recognizer.destroy()
+                    if (screenLifetime.isActive) {
+                        statusText = "Didn't catch that — please try again."
+                        isBusy = false
+                    }
                     return
                 }
-                statusText = "Translating..."
-                translator.downloadModelIfNeeded()
-                    .addOnSuccessListener {
-                        translator.translate(said)
-                            .addOnSuccessListener { translated ->
-                                translatedText = translated
-                                statusText = "Speaking..."
-                                speak(translated, outputLocale)
-                            }
-                            .addOnFailureListener { e ->
-                                statusText = "Translation failed: ${e.message}"
-                            }
+
+                if (screenLifetime.isActive) statusText = "Translating..."
+
+                // Created only now that there's actual text to translate, and kept alive
+                // through the whole chain below regardless of what the screen does in the
+                // meantime. Not tied to any DisposableEffect - this request's own terminal
+                // callback (success, failure, or a caught synchronous exception) is the
+                // only thing that closes it, exactly once.
+                val translator = Translation.getClient(
+                    TranslatorOptions.Builder()
+                        .setSourceLanguage(sourceCode)
+                        .setTargetLanguage(targetCode)
+                        .build()
+                )
+                var translatorClosed = false
+                fun closeTranslatorOnce() {
+                    if (!translatorClosed) {
+                        translatorClosed = true
+                        translator.close()
                     }
-                    .addOnFailureListener { e ->
-                        // Translation-model download/prep failure, distinct from a mic error.
-                        statusText = "Couldn't prepare the translation language. Check your connection and try again."
+                }
+
+                try {
+                    translator.downloadModelIfNeeded()
+                        .addOnSuccessListener {
+                            try {
+                                translator.translate(said)
+                                    .addOnSuccessListener { translated ->
+                                        if (screenLifetime.isActive) {
+                                            translatedText = translated
+                                            statusText = "Speaking..."
+                                            speak(translated, outputLocale)
+                                            isBusy = false
+                                        }
+                                        closeTranslatorOnce()
+                                    }
+                                    .addOnFailureListener {
+                                        if (screenLifetime.isActive) {
+                                            statusText = "Translation could not finish. Please try again."
+                                            isBusy = false
+                                        }
+                                        closeTranslatorOnce()
+                                    }
+                            } catch (e: IllegalStateException) {
+                                // translate() throws this synchronously if the translator
+                                // was somehow already closed - not delivered to the
+                                // failure listener above.
+                                if (screenLifetime.isActive) {
+                                    statusText = "Translation could not finish. Please try again."
+                                    isBusy = false
+                                }
+                                closeTranslatorOnce()
+                            }
+                        }
+                        .addOnFailureListener {
+                            // Translation-model download/prep failure, distinct from a mic error.
+                            if (screenLifetime.isActive) {
+                                statusText = "Couldn't prepare the translation language. Check your connection and try again."
+                                isBusy = false
+                            }
+                            closeTranslatorOnce()
+                        }
+                } catch (e: IllegalStateException) {
+                    // downloadModelIfNeeded() throws this synchronously in the same
+                    // already-closed scenario.
+                    if (screenLifetime.isActive) {
+                        statusText = "Translation could not finish. Please try again."
+                        isBusy = false
                     }
-                recognizer.destroy()
+                    closeTranslatorOnce()
+                }
             }
 
             override fun onError(error: Int) {
                 // `error` is a SpeechRecognizer.ERROR_* code (see android docs) - kept out of
                 // the user-facing message but useful when reported back for debugging.
-                statusText = "Microphone/speech recognition error (code $error). Please try again."
                 recognizer.destroy()
+                if (screenLifetime.isActive) {
+                    statusText = "Microphone/speech recognition error (code $error). Please try again."
+                    isBusy = false
+                }
             }
 
             override fun onReadyForSpeech(params: android.os.Bundle?) {
-                statusText = "Listening…"
+                if (screenLifetime.isActive) statusText = "Listening…"
             }
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { statusText = "Processing…" }
+            override fun onEndOfSpeech() { if (screenLifetime.isActive) statusText = "Processing…" }
             override fun onPartialResults(partialResults: android.os.Bundle?) {}
             override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
         })
@@ -204,20 +281,28 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
         try {
             recognizer.startListening(intent)
         } catch (e: Exception) {
-            statusText = "Couldn't start listening: ${e.message}"
             recognizer.destroy()
+            if (screenLifetime.isActive) {
+                statusText = "Couldn't start listening: ${e.message}"
+                isBusy = false
+            }
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
-    ) {
-        AppLogo()
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Scrollable main content takes all space above the footer; the footer itself
+        // is a sibling below it, so it sits at the actual bottom of the screen instead
+        // of after the content in scroll order.
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
+        ) {
+        AppIcon()
 
         Text("Chat Later Translator")
         if (!isPaid) {
@@ -234,12 +319,14 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
                 label = "Language A",
                 selected = langA,
                 onSelected = { langA = it },
+                enabled = !isBusy,
                 modifier = Modifier.weight(1f)
             )
             LanguageDropdown(
                 label = "Language B",
                 selected = langB,
                 onSelected = { langB = it },
+                enabled = !isBusy,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -266,9 +353,9 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Button(
-                enabled = langA != langB,
+                enabled = langA != langB && !isBusy,
                 onClick = {
-                    listenAndTranslate(langA.speechTag, aToB, langB.ttsLocale)
+                    listenAndTranslate(langA.speechTag, langA.mlKitCode, langB.mlKitCode, langB.ttsLocale)
                 },
                 modifier = Modifier
                     .weight(1f)
@@ -278,9 +365,9 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
             }
 
             Button(
-                enabled = langA != langB,
+                enabled = langA != langB && !isBusy,
                 onClick = {
-                    listenAndTranslate(langB.speechTag, bToA, langA.ttsLocale)
+                    listenAndTranslate(langB.speechTag, langB.mlKitCode, langA.mlKitCode, langA.ttsLocale)
                 },
                 modifier = Modifier
                     .weight(1f)
@@ -288,6 +375,7 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
             ) {
                 Text("🎤 Speak ${langB.label}")
             }
+        }
         }
 
         AppFooter()
@@ -302,6 +390,7 @@ private fun LanguageDropdown(
     label: String,
     selected: AppLanguage,
     onSelected: (AppLanguage) -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var showPicker by remember { mutableStateOf(false) }
@@ -315,6 +404,7 @@ private fun LanguageDropdown(
             value = selected.label,
             onValueChange = {},
             readOnly = true,
+            enabled = enabled,
             label = { Text(label) },
             modifier = Modifier.fillMaxWidth()
         )
@@ -322,6 +412,7 @@ private fun LanguageDropdown(
             modifier = Modifier
                 .matchParentSize()
                 .clickable(
+                    enabled = enabled,
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClickLabel = "Opens a language picker dialog",

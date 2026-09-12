@@ -110,15 +110,19 @@ fun LoginScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         updateInfo?.let { UpdateBanner(it) }
 
+        // Scrollable main content takes all space above the footer; the footer itself
+        // is a sibling below it (outside this weighted Column), so it sits at the
+        // actual bottom of the screen instead of after the content in scroll order.
         Column(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            AppLogo()
+            AppIcon()
 
             Text("Chat Later - Sign In")
 
@@ -221,9 +225,9 @@ fun LoginScreen(
             ) {
                 Text("Sign in with Google")
             }
+        }
+        }
 
-            AppFooter()
-        }
-        }
+        AppFooter()
     }
 }

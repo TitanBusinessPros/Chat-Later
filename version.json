@@ -1,6 +1,6 @@
 {
-  "versionCode": 11,
-  "versionName": "1.10",
+  "versionCode": 12,
+  "versionName": "1.11",
   "apkUrl": "https://github.com/TitanBusinessPros/Chat-Later/releases/latest/download/Chat-Later.apk",
-  "notes": "Fixed a microphone regression (removed silence-length extras that caused empty recognition results) and corrected the footer's Terms/Privacy links to point to Chat-Later's own pages."
+  "notes": "Fixed a crash (\"Translator has been closed\") that could occur if the screen changed mid-translation. Redesigned the top of the screen: the app icon now leads, and the Titan Business Pros logo moved into the footer."
 }

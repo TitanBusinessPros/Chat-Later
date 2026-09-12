@@ -5,7 +5,10 @@ import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -86,23 +89,30 @@ fun HomeScreen(user: FirebaseUser, firestore: FirebaseFirestore) {
 @Composable
 fun TrialExpiredScreen() {
     val context = LocalContext.current
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        AppLogo()
-
-        Text("Your free trial has ended.")
-        Button(
-            onClick = {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(STRIPE_PAYMENT_LINK)))
-            },
-            modifier = Modifier.padding(top = 16.dp)
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Scrollable main content takes all space above the footer; the footer itself
+        // is a sibling below it, so it sits at the actual bottom of the screen instead
+        // of after the content in scroll order.
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text("Subscribe Now")
+            AppIcon()
+
+            Text("Your free trial has ended.")
+            Button(
+                onClick = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(STRIPE_PAYMENT_LINK)))
+                },
+                modifier = Modifier.padding(top = 16.dp)
+            ) {
+                Text("Subscribe Now")
+            }
         }
 
         AppFooter()
