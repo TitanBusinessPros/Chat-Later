@@ -30,7 +30,10 @@ val SUPPORTED_LANGUAGES = listOf(
     AppLanguage("Bengali", TranslateLanguage.BENGALI, "bn-BD", Locale("bn", "BD")),
     AppLanguage("Bulgarian", TranslateLanguage.BULGARIAN, "bg-BG", Locale("bg", "BG")),
     AppLanguage("Catalan", TranslateLanguage.CATALAN, "ca-ES", Locale("ca", "ES")),
-    AppLanguage("Chinese", TranslateLanguage.CHINESE, "zh-CN", Locale.SIMPLIFIED_CHINESE),
+    // ML Kit's "CHINESE" model and Locale.SIMPLIFIED_CHINESE/zh-CN are specifically
+    // Mandarin in simplified script, not the whole Chinese language family (Cantonese,
+    // Wu, etc. aren't covered), so the label names the actual language, not the family.
+    AppLanguage("Mandarin (Simplified)", TranslateLanguage.CHINESE, "zh-CN", Locale.SIMPLIFIED_CHINESE),
     AppLanguage("Croatian", TranslateLanguage.CROATIAN, "hr-HR", Locale("hr", "HR")),
     AppLanguage("Czech", TranslateLanguage.CZECH, "cs-CZ", Locale("cs", "CZ")),
     AppLanguage("Danish", TranslateLanguage.DANISH, "da-DK", Locale("da", "DK")),
