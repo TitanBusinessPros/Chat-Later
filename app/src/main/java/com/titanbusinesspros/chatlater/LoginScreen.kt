@@ -164,6 +164,13 @@ fun LoginScreen(
         } else {
             Button(
                 onClick = {
+                    // Firebase Auth throws IllegalArgumentException synchronously - not
+                    // via the failure listener below - if either string is empty, so
+                    // that has to be caught here before calling it at all.
+                    if (email.isBlank() || password.isBlank()) {
+                        errorMessage = "Enter both an email and a password"
+                        return@Button
+                    }
                     errorMessage = null
                     isLoading = true
                     auth.signInWithEmailAndPassword(email, password)
@@ -185,6 +192,10 @@ fun LoginScreen(
 
             TextButton(
                 onClick = {
+                    if (email.isBlank() || password.isBlank()) {
+                        errorMessage = "Enter both an email and a password"
+                        return@TextButton
+                    }
                     errorMessage = null
                     isLoading = true
                     auth.createUserWithEmailAndPassword(email, password)

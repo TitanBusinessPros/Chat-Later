@@ -1,6 +1,6 @@
 {
-  "versionCode": 15,
-  "versionName": "1.14",
+  "versionCode": 16,
+  "versionName": "1.15",
   "apkUrl": "https://github.com/TitanBusinessPros/Chat-Later/releases/latest/download/Chat-Later.apk",
-  "notes": "Renamed the \"Chinese\" language option to \"Mandarin (Simplified)\" - the actual specific language and script the on-device model translates, not the broader Chinese language family."
+  "notes": "Fixed a crash when tapping Log In or Create an account with an empty email or password field. Firebase Auth throws immediately in that case rather than reporting it as a normal sign-in failure; the app now checks first and shows an on-screen message instead of crashing."
 }
