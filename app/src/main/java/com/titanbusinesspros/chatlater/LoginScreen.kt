@@ -101,7 +101,7 @@ fun LoginScreen(
                         if (task.isSuccessful) {
                             onLoggedIn()
                         } else {
-                            errorMessage = task.exception?.message ?: "Google sign-in failed"
+                            errorMessage = task.exception?.message.ifBlankUse("Google sign-in failed")
                         }
                     }
             } catch (e: GetCredentialCancellationException) {
@@ -109,6 +109,13 @@ fun LoginScreen(
             } catch (e: GetCredentialException) {
                 isLoading = false
                 errorMessage = e.message.ifBlankUse("Google sign-in failed")
+            } catch (e: Exception) {
+                // Last resort: anything unexpected (a malformed credential response, a
+                // GoogleIdTokenParsingException, etc.) still lands on screen with the
+                // exception's own class/message instead of being silently invisible or
+                // crashing this coroutine uncaught.
+                isLoading = false
+                errorMessage = "Google sign-in failed: ${e.javaClass.simpleName}: ${e.message.ifBlankUse("(no details)")}"
             }
         }
     }

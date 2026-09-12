@@ -1,6 +1,6 @@
 {
-  "versionCode": 17,
-  "versionName": "1.16",
+  "versionCode": 18,
+  "versionName": "1.17",
   "apkUrl": "https://github.com/TitanBusinessPros/Chat-Later/releases/latest/download/Chat-Later.apk",
-  "notes": "Fixed sign-in/sign-up/Google sign-in error messages silently showing nothing when the underlying error had an empty (but non-null) message. Also: Google Sign-In requires the release app's SHA-1 fingerprint to be registered in the Firebase console - if it still does nothing after installing this version, that console step is still needed."
+  "notes": "Fixed a second Google Sign-In failure path (the Firebase signInWithCredential step, separate from the account-picker step fixed in v1.16) that could still show nothing on a blank error message. Added a catch-all so any unexpected error in Google Sign-In always shows on screen with its exception type and message, instead of ever failing silently."
 }

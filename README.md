@@ -19,7 +19,7 @@ Firebase (Auth + Firestore) tracks logins and trial/subscription status — free
 - ML Kit Translate — all 59 on-device supported languages, picked via a searchable dialog
 - Stripe Payment Link for subscription payment (manual link for now, no in-app billing SDK)
 
-## Current status — v1.16 (versionCode 17)
+## Current status — v1.17 (versionCode 18)
 
 Published and live at https://github.com/TitanBusinessPros/Chat-Later/releases/latest
 
@@ -39,6 +39,7 @@ Built so far:
 - [x] Renamed the "Chinese" language option to "Mandarin (Simplified)" — the actual specific language and script the on-device model translates, matching how every other entry in the 59-language list is named precisely rather than by a broader language family
 - [x] Fixed a crash when tapping Log In or Create an account with an empty email or password field — Firebase Auth throws `IllegalArgumentException` synchronously in that case instead of reporting it as a normal sign-in failure, and neither button checked for it first; both now show "Enter both an email and a password" instead of crashing
 - [x] Fixed sign-in/sign-up/Google sign-in error messages silently showing nothing when the underlying exception had an empty (but non-null) message — `?: fallback` only substitutes on `null`, not blank, so all three now go through a helper that treats both the same
+- [x] Fixed a second, previously-missed Google Sign-In failure path (the `signInWithCredential` step after the account picker, distinct from the picker step itself) that had the same blank-message gap, and added a catch-all so any unexpected error there always shows its exception type and message on screen instead of ever being silent
 
 Still to do:
 - [ ] Register this release keystore's SHA-1/SHA-256 fingerprint in the Firebase console (Project settings → Your apps → Add fingerprint) — Google Sign-In does nothing silently without it, and this is a console step only the account owner can do
