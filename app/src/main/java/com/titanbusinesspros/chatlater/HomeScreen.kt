@@ -93,6 +93,8 @@ fun TrialExpiredScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        AppLogo()
+
         Text("Your free trial has ended.")
         Button(
             onClick = {
@@ -102,5 +104,7 @@ fun TrialExpiredScreen() {
         ) {
             Text("Subscribe Now")
         }
+
+        AppFooter()
     }
 }

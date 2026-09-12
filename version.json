@@ -1,6 +1,6 @@
 {
-  "versionCode": 9,
-  "versionName": "1.8",
+  "versionCode": 10,
+  "versionName": "1.9",
   "apkUrl": "https://github.com/TitanBusinessPros/Chat-Later/releases/latest/download/Chat-Later.apk",
-  "notes": "Fixed mic error 13 (language pack not downloaded) by no longer forcing offline-only speech recognition."
+  "notes": "Full 59-language picker with search, Titan logo, footer with contact/legal links, longer pause before the mic stops listening, and accessibility improvements."
 }

@@ -9,21 +9,29 @@ import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -33,7 +41,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
@@ -129,6 +143,13 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
             // that language's offline pack downloaded, or it fails with
             // ERROR_LANGUAGE_UNAVAILABLE (code 13). Letting it use the network when needed
             // works out of the box on every device.
+
+            // Ask for up to 4 seconds of silence before the recognizer finalizes what was
+            // said, so a brief pause mid-sentence doesn't cut speech off early. This is a
+            // request, not a guarantee - the phone's speech service decides the actual
+            // cutoff behavior, and some devices/services may not honor it.
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 4000)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 4000)
         }
 
         recognizer.setRecognitionListener(object : RecognitionListener {
@@ -185,10 +206,13 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
+        AppLogo()
+
         Text("Chat Later Translator")
         if (!isPaid) {
             Text("Free trial: $daysLeft day(s) left")
@@ -221,6 +245,11 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
         }
 
         Text(text = statusText, modifier = Modifier.padding(top = 16.dp))
+        Text(
+            text = "The app requests up to four seconds of pause time before it stops " +
+                "listening; the phone's speech service controls the final behavior.",
+            modifier = Modifier.padding(top = 4.dp)
+        )
 
         if (heardText.isNotBlank()) {
             Text(text = "Heard: $heardText", modifier = Modifier.padding(top = 12.dp))
@@ -259,11 +288,14 @@ fun ConversationTranslatorScreen(daysLeft: Long, isPaid: Boolean) {
                 Text("🎤 Speak ${langB.label}")
             }
         }
+
+        AppFooter()
     }
 }
 
-// A dropdown for picking one of SUPPORTED_LANGUAGES.
-@OptIn(ExperimentalMaterial3Api::class)
+// Tapping this field opens a searchable full-list picker (LanguagePickerDialog) instead
+// of a plain dropdown, since scrolling through all 59 languages unfiltered is unwieldy
+// on a phone screen.
 @Composable
 private fun LanguageDropdown(
     label: String,
@@ -271,31 +303,133 @@ private fun LanguageDropdown(
     onSelected: (AppLanguage) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = modifier
-    ) {
+    var showPicker by remember { mutableStateOf(false) }
+
+    // A read-only OutlinedTextField can absorb its own taps for cursor/focus handling
+    // instead of reliably passing them to an outer clickable. A transparent Box on top,
+    // matching its size, reliably intercepts the tap while the field underneath still
+    // renders and looks like a normal outlined field.
+    Box(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = selected.label,
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                .fillMaxWidth()
+            modifier = Modifier.fillMaxWidth()
         )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            SUPPORTED_LANGUAGES.forEach { lang ->
-                DropdownMenuItem(
-                    text = { Text(lang.label) },
-                    onClick = {
-                        onSelected(lang)
-                        expanded = false
-                    }
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClickLabel = "Opens a language picker dialog",
+                    role = Role.Button
+                ) { showPicker = true }
+                // This overlay - not the text field underneath - is what actually
+                // receives the tap, so it needs its own description for TalkBack:
+                // the field's label plus the language currently selected.
+                .semantics {
+                    contentDescription = "$label, currently ${selected.label}"
+                }
+        )
+    }
+
+    if (showPicker) {
+        LanguagePickerDialog(
+            selected = selected,
+            onSelected = { lang ->
+                onSelected(lang)
+                showPicker = false
+            },
+            onDismiss = { showPicker = false }
+        )
+    }
+}
+
+// Full-screen-ish dialog: a search field plus a scrollable, filtered list of all 59
+// languages. Filtering is case-insensitive and updates as the user types.
+@Composable
+private fun LanguagePickerDialog(
+    selected: AppLanguage,
+    onSelected: (AppLanguage) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(query) {
+        if (query.isBlank()) {
+            SUPPORTED_LANGUAGES
+        } else {
+            SUPPORTED_LANGUAGES.filter { it.label.contains(query, ignoreCase = true) }
+        }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 480.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Choose a language")
+
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text("Search") },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp, bottom = 8.dp)
                 )
+
+                if (filtered.isEmpty()) {
+                    Text("No languages match \"$query\"", modifier = Modifier.padding(16.dp))
+                } else {
+                    LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+                        items(filtered) { lang ->
+                            val isSelected = lang == selected
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp)
+                                    // .selectable() (rather than plain .clickable()) also
+                                    // attaches the selected/not-selected state to this row's
+                                    // accessibility semantics, so screen readers announce it.
+                                    .selectable(selected = isSelected, onClick = { onSelected(lang) })
+                                    .padding(horizontal = 4.dp)
+                            ) {
+                                Text(
+                                    text = lang.label,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                // Fixed-width slot so labels line up the same whether or
+                                // not this row is selected. The row's own .selectable()
+                                // above already announces selected/not-selected to
+                                // TalkBack, so this glyph is purely decorative and is
+                                // excluded from the accessibility tree to avoid a second,
+                                // redundant announcement.
+                                Box(
+                                    modifier = Modifier
+                                        .width(24.dp)
+                                        .clearAndSetSemantics {},
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isSelected) {
+                                        Text("✓", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                    Text("Close")
+                }
             }
         }
     }
